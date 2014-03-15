@@ -1,0 +1,39 @@
+data = Hash.new
+
+class Array
+  def average
+    sum = 0
+    self.each do |x|
+      sum+=x
+    end
+    sum.to_f/self.size
+  end
+  
+  def dev
+    dev = 0
+    avg = self.average
+    self.each do |x|
+      dev += (x-avg)**2
+    end
+    Math.sqrt(dev.to_f/self.size)
+  end
+end
+
+ARGF.each do |line|
+  a = line.chomp.split(/\s/)
+  if (a.size > 10)
+    data[a[0]] = Array.new if (data[a[0]] == nil)
+    data[a[0]] << [10,16].map{|x| a[x].to_f/1024}
+  end
+end
+
+data.keys.sort.each do |tag|
+  a = data[tag]
+  read = Array.new
+  write = Array.new
+  a.each do |tup|
+    write << tup[0]
+    read << tup[1]
+  end
+  puts [tag, read.average, read.dev, write.average, write.dev].join("\t")
+end

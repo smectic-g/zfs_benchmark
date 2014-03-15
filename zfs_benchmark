@@ -1,0 +1,58 @@
+#! /usr/bin/ruby
+
+hdd_list=["ada0","ada1","ada2","ada3","ada4","ada5"]
+pool_name = "test"
+bench_dir = "/test/bench"
+bench_user = "a_user:a_group"
+bonnie_path = "/usr/local/sbin/bonnie++"
+
+def make_pool(type, num, hdd_list, pool_name)
+  # destroy if former pool exist
+  `zpool list`.each_line do |line|
+    a = line.chomp.split(/\s+/)
+    system "zpool destroy #{pool_name}" if (a[0] != "NAME" && a[0]==pool_name)
+  end
+  system "zpool create #{pool_name} #{type} #{hdd_list.sample(num).join(" ")}"
+end
+
+def bench(tag, bench_dir, bench_user, bonnie_path)
+  # assume clear directory
+  system "mkdir #{bench_dir}"
+  system "chown #{bench_user} #{bench_dir}"
+  result = `#{bonnie_path} -d #{bench_dir} -u #{bench_user}`
+  [tag, result.split(/\n/)[-1].chomp.split(",")].flatten
+end
+
+type = ""
+(1..6).each do |num|
+  10.times do 
+    make_pool(type, num, hdd_list, pool_name)
+    puts bench("stripe_#{num}", bench_dir, bench_user, bonnie_path).join("\t")
+  end
+end
+
+type = "raidz"
+(3..6).each do |num|
+  10.times do
+    make_pool(type, num, hdd_list, pool_name)
+    puts bench("#{type}_#{num}", bench_dir, bench_user, bonnie_path).join("\t")
+  end
+end
+
+hdd_list=["ada0","ada1","ada2","ada3","ada4","ada5"].map{|x| "/dev/#{x}.nop"}
+type = ""
+(1..6).each do |num|
+  10.times do
+    make_pool(type, num, hdd_list, pool_name)
+    puts bench("nop_stripe_#{num}", bench_dir, bench_user, bonnie_path).join("\t")
+  end
+end
+
+type = "raidz"
+(3..6).each do |num|
+  10.times do
+    make_pool(type, num, hdd_list, pool_name)
+    puts bench("nop_#{type}_#{num}", bench_dir, bench_user, bonnie_path).join("\t")
+  end
+end
+
